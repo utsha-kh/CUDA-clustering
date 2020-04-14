@@ -4,6 +4,11 @@
 
 using namespace std;
 
+// Need to establish a way to detect convergence.
+// Need to implement random selection to initialize centers.
+
+// Also, need a way to visualize vectors so that results can be easily seen.
+
 class kMeans{
 private:
     int n;  // number of data points
@@ -17,16 +22,16 @@ private:
 
     // return L2 distance between two points
     int getDistance(vector<int> x1, vector<int> x2){
-        int d = 0;
+        int dist = 0;
         for(int i = 0; i < x1.size; i++){
-            d += (x2[i] - x1[i]) * (x2[i] - x1[i]);
+            dist += (x2[i] - x1[i]) * (x2[i] - x1[i]);
         }
-        return d; 
+        return dist; 
     }
 
+    // add two vectors
     vector<int> addVector(vector<int> x1, vector<int> x2){
-        vector<int> retVector;
-        retVector.resize(x1.size);
+        vector<int> retVector(x1.size, 0);
         for(int i = 0; i < x1.size; i++){
             retVector[i] = x1[i] + x2[i];
         }
@@ -43,7 +48,7 @@ private:
         } 
     }
 
-    // Assign each data point x_i to the closest center
+    // Assign each data point x_i to the closest center u_j
     void assignDataPoints(){
         for(int i = 0; i < n; i++){
             //S[whichSet[i]].erase(x[i]);
@@ -60,11 +65,10 @@ private:
         }
     }
 
-    // Update each center u_i to average of all points who belong to that set
+    // Update each center of sets u_i to the average of all data points who belong to that set
     void updateCenters(){
         for(int i = 0; i < k; i++){
-            vector<int> sum;
-            sum.resize(d);  // a d-dimensional vector
+            vector<int> sum(d, 0); // a d-dimensional vector
             for(int j = 0; j < n; j++){
                 if(whichSet[j] == i){
                     sum = addVector(sum, x[j]);
@@ -82,9 +86,9 @@ public:
         this->x = x;
         this->whichSet.resize(n);
         this->u.resize(k);
-        //this->S.resize(k);
     }
 
+    // Calling this function will do everything for the user
     void kMeansClustering(){
         initCenters();
         while(!converged){
@@ -93,4 +97,4 @@ public:
         }
     }
 
-}
+};
