@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <cfloat>
 
 using namespace std;
 
@@ -9,20 +10,20 @@ using namespace std;
 
 // Also, need a way to visualize vectors so that results can be easily seen.
 
-class kMeans{
+class KMeans{
 private:
     int n;  // number of data points
     int d;  // dimension of data points (vectors)
-    int k;  // number of groups to cluster
-    vector<vector<int>> x;  // input data points
+    int k;  // number of clusters
+    vector<vector<float>> x;  // input data points
     vector<int> whichSet;  // stores info that which set a vector belong to
-    vector<vector<int>> u; // centers of each of k sets
+    vector<vector<float>> u; // centers of each of k sets
     //vector<set<vector<int>>> S; // k different sets of vectors
     bool converged = false;
 
     // return L2 distance between two points
-    int getDistance(vector<int> x1, vector<int> x2){
-        int dist = 0;
+    float getDistance(vector<float> x1, vector<float> x2){
+        float dist = 0;
         for(int i = 0; i < x1.size; i++){
             dist += (x2[i] - x1[i]) * (x2[i] - x1[i]);
         }
@@ -30,8 +31,8 @@ private:
     }
 
     // add two vectors
-    vector<int> addVector(vector<int> x1, vector<int> x2){
-        vector<int> retVector(x1.size, 0);
+    vector<float> addVector(vector<float> x1, vector<float> x2){
+        vector<float> retVector(x1.size);
         for(int i = 0; i < x1.size; i++){
             retVector[i] = x1[i] + x2[i];
         }
@@ -53,7 +54,7 @@ private:
         for(int i = 0; i < n; i++){
             //S[whichSet[i]].erase(x[i]);
             int closest = 0;
-            int minDistance = INTMAX_MAX;
+            float minDistance = FLT_MAX;
             for(int j = 0; j < k; j++){
                 if(getDistance(x[i], u[j]) < minDistance){
                     closest = j;
@@ -68,7 +69,7 @@ private:
     // Update each center of sets u_i to the average of all data points who belong to that set
     void updateCenters(){
         for(int i = 0; i < k; i++){
-            vector<int> sum(d, 0); // a d-dimensional vector
+            vector<float> sum(d, 0); // a d-dimensional vector
             for(int j = 0; j < n; j++){
                 if(whichSet[j] == i){
                     sum = addVector(sum, x[j]);
@@ -79,7 +80,7 @@ private:
     }
 
 public:
-    kMeans(int n, int d, int k, vector<vector<int>> x){
+    KMeans(int n, int d, int k, vector<vector<float>> x){
         this->n = n;
         this->d = d;
         this->k = k;
