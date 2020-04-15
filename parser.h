@@ -1,5 +1,5 @@
-#ifndef __Parser__H
-#define __Parser__H
+#ifndef __PARSER__H
+#define __PARSER__H
 
 #include <vector>
 
