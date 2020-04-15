@@ -4,29 +4,27 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-
 class KMeans{
 private:
     int n;  // number of data points
     int d;  // dimension of data points (vectors)
     int k;  // number of clusters
-    vector<vector<float>> x;  // input data points
-    vector<int> whichSet;  // stores info that which set a vector belong to
-    vector<vector<float>> u; // centers of each of k sets
+    std::vector<std::vector<float>> x;  // input data points
+    std::vector<int> whichSet;  // stores info that which set a vector belong to
+    std::vector<std::vector<float>> u; // centers of each of k sets
     bool converged = false;
 
     // return L2 distance between two points
-    float getDistance(vector<float> x1, vector<float> x2);
+    float getDistance(std::vector<float> x1, std::vector<float> x2);
 
     // return current Root Mean Squared Error value
     float getRMSE(void);
 
     // add two vectors
-    vector<float> addVector(vector<float> x1, vector<float> x2);
+    std::vector<float> addVector(std::vector<float> x1, std::vector<float> x2);
 
     // divide vector by scaler
-    vector<float> divideVector(vector<float> v, int s){
+    std::vector<float> divideVector(std::vector<float> v, int s);
 
     // initialize each center values u_i to a randomly chosen data point
     void initCenters();
@@ -38,7 +36,7 @@ private:
     void updateCenters();
 
 public:
-    KMeans(int n, int d, int k, vector<vector<float>> x);
+    KMeans(int n, int d, int k, std::vector<std::vector<float>> x);
 
     // Calling this function will do everything for the user
     void kMeansClustering();

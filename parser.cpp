@@ -3,8 +3,6 @@
 #include <vector>
 #include "parser.h"
 
-using namespace std;
-
 Parser::Parser(int rows, int cols){
     this->rows = rows; 
     this->cols = cols;

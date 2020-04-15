@@ -3,11 +3,9 @@
 
 #include <vector>
 
-using namespace std;
-
 class Parser{
 public:
-    vector<vector<float>> data;
+    std::vector<std::vector<float>> data;
     int rows; 
     int cols; 
 

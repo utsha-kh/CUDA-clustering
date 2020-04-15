@@ -5,15 +5,13 @@
 #include <cmath>
 #include "kmeans.h"
 
-using namespace std;
-
 // Need to establish a way to detect convergence.
 // Need to implement random selection to initialize centers.
 
 // Also, need a way to visualize vectors so that results can be easily seen.
 
 // return L2 distance between two points
-float KMeans::getDistance(vector<float> x1, vector<float> x2){
+float KMeans::getDistance(std::vector<float> x1, std::vector<float> x2){
     float dist = 0;
     for(int i = 0; i < x1.size(); i++){
         dist += (x2[i] - x1[i]) * (x2[i] - x1[i]);
@@ -31,8 +29,8 @@ float KMeans::getRMSE(void){
 }
 
 // add two vectors
-vector<float> KMeans::addVector(vector<float> x1, vector<float> x2){
-    vector<float> retVector(x1.size());
+std::vector<float> KMeans::addVector(std::vector<float> x1, std::vector<float> x2){
+    std::vector<float> retVector(x1.size());
     for(int i = 0; i < x1.size(); i++){
         retVector[i] = x1[i] + x2[i];
     }
@@ -40,7 +38,7 @@ vector<float> KMeans::addVector(vector<float> x1, vector<float> x2){
 }
 
 // divide vector by scaler
-vector<float> KMeans::divideVector(vector<float> v, int s){
+std::vector<float> KMeans::divideVector(std::vector<float> v, int s){
     for(int i = 0; i < v.size(); i++){
         v[i] /= s;
     }
@@ -78,7 +76,7 @@ void KMeans::assignDataPoints(){
 void KMeans::updateCenters(){
     int numVectors = 0;
     for(int i = 0; i < k; i++){
-        vector<float> sum(d, 0); // a d-dimensional vector
+        std::vector<float> sum(d, 0); // a d-dimensional vector
         for(int j = 0; j < n; j++){
             if(whichSet[j] == i){
                 sum = addVector(sum, x[j]);
@@ -89,7 +87,7 @@ void KMeans::updateCenters(){
     }
 }
 
-KMeans::KMeans(int n, int d, int k, vector<vector<float>> x){
+KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float>> x){
     this->n = n;
     this->d = d;
     this->k = k;
