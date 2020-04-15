@@ -25,6 +25,9 @@ private:
     // add two vectors
     vector<float> addVector(vector<float> x1, vector<float> x2);
 
+    // divide vector by scaler
+    vector<float> divideVector(vector<float> v, int s){
+
     // initialize each center values u_i to a randomly chosen data point
     void initCenters();
 

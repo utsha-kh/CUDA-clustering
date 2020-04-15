@@ -1,6 +1,10 @@
 #ifndef __Parser__H
 #define __Parser__H
 
+#include <vector>
+
+using namespace std;
+
 class Parser{
 public:
     vector<vector<float>> data;

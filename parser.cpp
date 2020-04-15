@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string.h>
 #include <vector>
-#include "parse.h"
+#include "parser.h"
 
 using namespace std;
 
@@ -49,13 +49,11 @@ Parser::Parser(const char* filename){
         c1 = strtok_r(NULL,"\n",&saveptr1);
         i++;
     }
-
 }
 
 /* private functions */
 
 //gets the number of rows in the csv file
-
 int Parser::getRowSize(const char *str_array){
     
     int count = 0; 

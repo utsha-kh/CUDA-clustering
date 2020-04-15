@@ -39,6 +39,14 @@ vector<float> KMeans::addVector(vector<float> x1, vector<float> x2){
     return retVector;
 }
 
+// divide vector by scaler
+vector<float> KMeans::divideVector(vector<float> v, int s){
+    for(int i = 0; i < v.size(); i++){
+        v[i] /= s;
+    }
+    return v;
+}
+
 // initialize each center values u_i to a randomly chosen data point
 void KMeans::initCenters(){
     // Each center u[i] should be a random data point x[j], but 
@@ -68,14 +76,16 @@ void KMeans::assignDataPoints(){
 
 // Update each center of sets u_i to the average of all data points who belong to that set
 void KMeans::updateCenters(){
+    int numVectors = 0;
     for(int i = 0; i < k; i++){
         vector<float> sum(d, 0); // a d-dimensional vector
         for(int j = 0; j < n; j++){
             if(whichSet[j] == i){
                 sum = addVector(sum, x[j]);
+                numVectors++;
             }
         }
-        u[i] = sum;
+        u[i] = divideVector(sum, numVectors);
     }
 }
 
