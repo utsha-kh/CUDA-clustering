@@ -14,10 +14,13 @@ private:
     vector<vector<float>> x;  // input data points
     vector<int> whichSet;  // stores info that which set a vector belong to
     vector<vector<float>> u; // centers of each of k sets
-    bool converged;
+    bool converged = false;
 
     // return L2 distance between two points
     float getDistance(vector<float> x1, vector<float> x2);
+
+    // return current Root Mean Squared Error value
+    float getRMSE(void);
 
     // add two vectors
     vector<float> addVector(vector<float> x1, vector<float> x2);
