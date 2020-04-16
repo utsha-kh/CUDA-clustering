@@ -5,7 +5,7 @@
 #include <numeric>
 #include <sstream>
 #include <vector>
-#include "kmeans.cpp"
+#include "kmeans.h"
 #include "parser.h"
 
 int main (int argc, char** argv) {
