@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <set>
 #include <cfloat>
@@ -51,7 +52,7 @@ void KMeans::initCenters(){
     // generating a non-repeated random number isn't straightforward
     // so I'll do it later
     for(int i = 0; i < k; i++){
-        u[i] = x[n * i / k - 1];
+        u[i] = x[i];
     } 
 }
 
@@ -97,16 +98,29 @@ KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float> > x){
     this->converged = false;
 }
 
+float myAbs(float a, float b){
+    if(a > b)
+        return a - b;
+    else
+        return b - a;
+}
+
 // Calling this function will do everything for the user
 void KMeans::kMeansClustering(){
     initCenters();
+    int iterations = 0;
     previousError = FLT_MAX;
-    while(!converged){
+    while(true){
         assignDataPoints();
         updateCenters();
         float currentError = getRMSE();
-        printf("Total Error Now: %f\n", currentError);
+        converged = myAbs(previousError, currentError) < 0.01;
+        if(converged) break;
+        iterations++;
+        std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
         previousError = currentError;
     }
+    std::cout << "# of iterations: " << iterations << std::endl;
 }
+
 

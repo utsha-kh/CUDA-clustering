@@ -17,7 +17,7 @@ int main (int argc, char** argv) {
     KMeans module(parser.rows, parser.cols, 2, parser.data);
 
     module.kMeansClustering();
-    parser.print();
+    //parser.print();
 
     return 0;
 
