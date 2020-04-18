@@ -87,13 +87,14 @@ void KMeans::updateCenters(){
     }
 }
 
-KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float>> x){
+KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float> > x){
     this->n = n;
     this->d = d;
     this->k = k;
     this->x = x;
     this->whichSet.resize(n);
     this->u.resize(k);
+    this->converged = false;
 }
 
 // Calling this function will do everything for the user

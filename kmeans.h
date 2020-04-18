@@ -10,10 +10,10 @@ private:
     int n;  // number of data points
     int d;  // dimension of data points (vectors)
     int k;  // number of clusters
-    std::vector<std::vector<float>> x;  // input data points
+    std::vector<std::vector<float> > x;  // input data points
     std::vector<int> whichSet;  // stores info that which set a vector belong to
-    std::vector<std::vector<float>> u; // centers of each of k sets
-    bool converged = false;
+    std::vector<std::vector<float> > u; // centers of each of k sets
+    bool converged;
     float previousError;
 
     // return L2 distance between two points
@@ -38,7 +38,7 @@ private:
     void updateCenters();
 
 public:
-    KMeans(int n, int d, int k, std::vector<std::vector<float>> x);
+    KMeans(int n, int d, int k, std::vector<std::vector<float> > x);
 
     // Calling this function will do everything for the user
     void kMeansClustering();

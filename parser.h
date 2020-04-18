@@ -5,7 +5,7 @@
 
 class Parser{
 public:
-    std::vector<std::vector<float>> data;
+    std::vector<std::vector<float> > data;
     int rows; 
     int cols; 
 
