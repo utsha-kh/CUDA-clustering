@@ -15,7 +15,7 @@ Parser::Parser(const char* filename){
 
     FILE *fp = fopen(filename,"r");
 
-    fseek(fp,0L,SEEK_END);
+    fseek(fp, 0L, SEEK_END);
     size_t file_size = ftell(fp);
     fseek(fp,0L,SEEK_SET); 
 

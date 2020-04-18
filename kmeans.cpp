@@ -51,7 +51,7 @@ void KMeans::initCenters(){
     // generating a non-repeated random number isn't straightforward
     // so I'll do it later
     for(int i = 0; i < k; i++){
-        u[i] = x[i];
+        u[i] = x[n * i / k - 1];
     } 
 }
 
@@ -99,9 +99,13 @@ KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float>> x){
 // Calling this function will do everything for the user
 void KMeans::kMeansClustering(){
     initCenters();
+    previousError = FLT_MAX;
     while(!converged){
         assignDataPoints();
         updateCenters();
-        printf("Total Error Now: %3f\n", getRMSE());
+        float currentError = getRMSE();
+        printf("Total Error Now: %f\n", currentError);
+        previousError = currentError;
     }
 }
+

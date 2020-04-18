@@ -10,5 +10,8 @@ kmeans.o: kmeans.cpp
 parser.o: parser.cpp
 	g++ -c parser.cpp
 
+clean:
+	rm -f *.o
+
 
 

@@ -10,13 +10,14 @@
 
 int main (int argc, char** argv) {
 
-    const char *filename = "input.txt";
+    const char *filename = "input.csv";
     //char *filename = argv[0];
     Parser parser(filename);
 
     KMeans module(parser.rows, parser.cols, 2, parser.data);
 
-    parser.print();
+    module.kMeansClustering();
+    //parser.print();
 
     return 0;
 

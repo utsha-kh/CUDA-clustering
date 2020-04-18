@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 class KMeans{
 private:
@@ -13,6 +14,7 @@ private:
     std::vector<int> whichSet;  // stores info that which set a vector belong to
     std::vector<std::vector<float>> u; // centers of each of k sets
     bool converged = false;
+    float previousError;
 
     // return L2 distance between two points
     float getDistance(std::vector<float> x1, std::vector<float> x2);
