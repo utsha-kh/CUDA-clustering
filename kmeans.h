@@ -42,6 +42,8 @@ public:
 
     // Calling this function will do everything for the user
     void kMeansClustering();
+    std::vector<std::vector<float> > getData();
+    std::vector<int> getLabel();
 
 };
 

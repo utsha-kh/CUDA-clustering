@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string.h>
 #include <vector>
 #include "parser.h"
@@ -17,7 +18,7 @@ Parser::Parser(const char* filename){
 
     fseek(fp, 0L, SEEK_END);
     size_t file_size = ftell(fp);
-    fseek(fp,0L,SEEK_SET); 
+    fseek(fp, 0L, SEEK_SET); 
 
     char *buffer = new char[file_size+1]; 
 
@@ -83,4 +84,22 @@ void Parser::print(void){
             }
             printf("]\n");
         }
+}
+
+void Parser::toCSV(const char *filename, std::vector<std::vector<float> > data, std::vector<int> labels){
+    std::ofstream fp;
+    fp.open(filename);
+    for(int i = 0; i < data[0].size(); i++){
+        fp << "f" << i << ",";
+    }
+    fp << "labels" << std::endl;
+    for(int i = 0; i < labels.size(); i++){
+        std::vector<float> tmp = data[i];
+        for(int j = 0; j < tmp.size(); j++){
+            fp << tmp[j] << ",";
+        }
+        fp << labels[i];
+        fp << std::endl;
+    }
+    fp.close();
 }

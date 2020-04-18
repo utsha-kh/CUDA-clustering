@@ -13,6 +13,7 @@ public:
     Parser(const char* filename);
  
     void print(void);
+    void toCSV(const char *filename, std::vector<std::vector<float> > data, std::vector<int> labels);
    
 private:
     int getRowSize(const char* str_array);

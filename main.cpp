@@ -14,11 +14,11 @@ int main (int argc, char** argv) {
     //char *filename = argv[0];
     Parser parser(filename);
 
-    KMeans module(parser.rows, parser.cols, 2, parser.data);
+    KMeans module(parser.rows, parser.cols, 5, parser.data);
 
     module.kMeansClustering();
     //parser.print();
-
+    parser.toCSV("result.csv", module.getData(), module.getLabel());
     return 0;
 
 }
