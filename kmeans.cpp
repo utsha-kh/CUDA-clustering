@@ -127,9 +127,6 @@ std::vector<std::vector<float> > KMeans::getData(){
     return x;
 }
 
-
-
-
 std::vector<int> KMeans::getLabel(){
     return whichSet;
 }
