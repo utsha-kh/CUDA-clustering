@@ -1,3 +1,6 @@
 *.o
 .ipynb_checkpoints/
 .vscode/
+*.csv
+*.ipynb
+clustering
