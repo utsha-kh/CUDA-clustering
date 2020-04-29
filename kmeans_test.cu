@@ -13,8 +13,8 @@ int n;  // number of data points
 int d;  // dimention of input data (usually 2, for 2D data)
 int k;  // number of clusterss
 
-__device__ void d_getDistance(float* x1, float* x2, float* ret);
-__global__ void d_getRMSE(float** dataPoints, int* labels, float** centeroids, float* ret);
+__device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k);
+__global__ void d_getRMSE(float* dataPoints, int* labels, float* centeroids, float* ret, int n, int d, int k);
 
 // return L2 distance between two points
 float getDistance(float* x1, float* x2){
@@ -26,49 +26,59 @@ float getDistance(float* x1, float* x2){
 }
 
 // return L2 distance between 2 points
-__device__ void d_getDistance(float* x1, float* x2, float *ret){
+__device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k){
 	float dist = 0;
-    for(int i = 0; i < 2; i++){
+    for(int i = 0; i < d; i++){
         dist += (x2[i] - x1[i]) * (x2[i] - x1[i]);
     }
     *ret = dist; 
 }
 
-// return current Root Mean Squared Error value of all points
+// return current Root Mean Squared Error value of all points. This is needed to detect convergence, but not essential in k-means algorithm.
 float getRMSE(float** dataPoints, int* labels, float** centeroids){
 
     float error = 0;
     float* err = new float[n];  // distance between each dataPoints to centeroids
-    float **d_dataPoints, **d_centeroids, *d_err; 
+    float *d_dataPoints, *d_centeroids, *d_err; 
     int *d_labels;
 
+    // Allocate memory and copy data into GPU
     cudaMalloc(&d_dataPoints, sizeof(float) * n * d);
     cudaMalloc(&d_labels, sizeof(int) * n);
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);
-    cudaMalloc(&d_err, sizeof(float) * n);
-
-    int block_size = n / THREAD_SIZE + (n % THREAD_SIZE != 1);
-
-    cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMalloc(&d_err, sizeof(float) * n);    
+        //Flattening matrix to 1D array when copying to GPU
+    for(int i = 0; i < n; i++){
+        cudaMemcpy(&d_dataPoints[i], dataPoints[i], sizeof(float) * d, cudaMemcpyHostToDevice);
+    }
+    for(int i = 0; i < k; i++){
+        cudaMemcpy(&d_centeroids[i], centeroids[i], sizeof(float) * d, cudaMemcpyHostToDevice);
+    }
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
-    d_getRMSE<<<block_size, THREAD_SIZE>>>(d_dataPoints, d_labels, d_centeroids, d_err);
+    
+    // call the kernel function to compute RMSE values in parallel
+    int block_size = n / THREAD_SIZE + (n % THREAD_SIZE != 1);
+    d_getRMSE<<<block_size, THREAD_SIZE>>>(d_dataPoints, d_labels, d_centeroids, d_err, n, d, k);
 
+    cudaDeviceSynchronize();
+
+    // copy back the result from GPU to CPU
     cudaMemcpy(err, d_err, sizeof(float) * n, cudaMemcpyDeviceToHost);
 
-    // could be made faster by parallel reduction
+    // Summing up computed errors. could be made faster by parallel reduction
     for(int i = 0; i < n; i++){
         error += err[i];
+        std::cout << "error[" << i << "] = " << err[i] << std::endl;
     }
-
+    // return actual Root Mean of Squared Errors.
     return sqrt(error / n);
 }
 
-// kernel of above function
-__global__ void d_getRMSE(float** dataPoints, int* labels, float** centeroids, float* err){
+// kernel of above function NOTE: this is like helper of RMSE. The error values stored in err[] still needs to be summed up.
+__global__ void d_getRMSE(float* dataPoints, int* labels, float* centeroids, float* err, int n, int d, int k){
     int id = blockIdx.x * blockDim.x + threadIdx.x;
-    if(id >= 1000) return;
-    d_getDistance(dataPoints[id], centeroids[labels[id]], &err[id]);
+    if(id >= n) return;
+    d_getDistance(&dataPoints[id], &centeroids[labels[id]], &err[id], n, d, k); 
 }
 
 // initialize each center values u_i to a randomly chosen data point
@@ -101,16 +111,26 @@ void kMeansClustering(float** dataPoints, int* labels){
     }
 
     initCenters(dataPoints, centeroids);
+
     int iterations = 0;
     float previousError = FLT_MAX;
     float currentError = 0;
-    while(true){
-        currentError = getRMSE(dataPoints, labels, centeroids);
-        if(hasConverged(previousError, currentError)) break;
-        previousError = currentError;
-        iterations++;
-        std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
+    currentError = getRMSE(dataPoints, labels, centeroids);     //
+    std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;  //
+
+    for(int i = 0; i < 5; i++){
+        std::cout << dataPoints[i][0] << "  " << dataPoints[i][1] << std::endl;
     }
+    for(int i = 0; i < k; i++){
+        std::cout << centeroids[i][0] << "   " << centeroids[i][1] << std::endl;
+    }
+    // while(true){
+    //     currentError = getRMSE(dataPoints, labels, centeroids);
+    //     if(hasConverged(previousError, currentError)) break;
+    //     previousError = currentError;
+    //     iterations++;
+    //     std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
+    // }
     std::cout << "# of iterations: " << iterations << std::endl;
 }
 
@@ -119,14 +139,16 @@ int main(){
     const char *filename = "input.csv";
     Parser parser(filename);
 
-    n = parser.rows; d = parser.cols;
+    n = parser.rows; d = parser.cols; k = 3;
 
     float** data = parser.rdata;
     int* labels = new int[n];
 
     kMeansClustering(data, labels);
     
-    parser.toCSV("result.csv", data, labels, n, d);
+    //parser.print();
+
+    // parser.toCSV("result.csv", data, labels, n, d);
     return 0;
 
 
