@@ -4,14 +4,6 @@
 #include <vector>
 #include "parser.h"
 
-Parser::Parser(int rows, int cols){
-    this->rows = rows; 
-    this->cols = cols;
-    this->data.resize(rows);
-    for(int i = 0; i < cols; i++)
-        data[i].resize(cols);
-}
-
 Parser::Parser(const char* filename){
 
     FILE *fp = fopen(filename,"r");
