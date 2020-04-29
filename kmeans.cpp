@@ -20,13 +20,13 @@ float KMeans::getDistance(std::vector<float> x1, std::vector<float> x2){
     return dist; 
 }
 
-// return current Root Mean Squared Error value
-float KMeans::getRMSE(void){
+// return current Mean Squared Error value
+float KMeans::getMSE(void){
     float err = 0;
     for(int i = 0; i < n; i++){
         err += getDistance(x[i], u[whichSet[i]]);
     }
-    return sqrt(err / n);
+    return err / n;
 }
 
 // add two vectors
@@ -113,7 +113,7 @@ void KMeans::kMeansClustering(){
     while(true){
         assignDataPoints();
         updateCenters();
-        float currentError = getRMSE();
+        float currentError = getMSE();
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
         iterations++;

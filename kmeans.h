@@ -19,8 +19,8 @@ private:
     // return L2 distance between two points
     float getDistance(std::vector<float> x1, std::vector<float> x2);
 
-    // return current Root Mean Squared Error value
-    float getRMSE(void);
+    // return current Mean Squared Error value
+    float getMSE(void);
 
     // add two vectors
     std::vector<float> addVector(std::vector<float> x1, std::vector<float> x2);
