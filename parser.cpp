@@ -30,10 +30,13 @@ Parser::Parser(const char* filename){
     cols = getColSize(buffer);
 
     data.resize(rows);
+    rdata = new float*[rows];
     
-    for(int i = 0 ; i < rows ; i++)
+    for(int i = 0 ; i < rows ; i++){
         data[i].resize(cols);
-    
+        rdata[i] = new float[cols]; 
+    }
+
     char *saveptr1, *saveptr2; 
     char *c1 = strtok_r(buffer,"\n",&saveptr1);
     int i = 0; 
@@ -42,6 +45,7 @@ Parser::Parser(const char* filename){
         int k = 0; 
         while(c2 != NULL){
           data[i][k] = atof(c2);  
+          rdata[i][k] = atof(c2);
           c2 = strtok_r(NULL,",",&saveptr2);
           k++;  
         }
@@ -50,7 +54,6 @@ Parser::Parser(const char* filename){
     }
 }
 
-/* private functions */
 
 //gets the number of rows in the csv file
 int Parser::getRowSize(const char *str_array){
@@ -94,12 +97,32 @@ void Parser::toCSV(const char *filename, std::vector<std::vector<float> > data, 
     }
     fp << "labels" << std::endl;
     for(int i = 0; i < labels.size(); i++){
-        std::vector<float> tmp = data[i];
-        for(int j = 0; j < tmp.size(); j++){
-            fp << tmp[j] << ",";
+        for(int j = 0; j < data[0].size(); j++){
+            fp << data[i][j] << ",";
         }
         fp << labels[i];
         fp << std::endl;
     }
     fp.close();
+}
+
+void Parser::toCSV(const char *filename, float** data, int* labels, int n, int d){
+    std::ofstream fp;
+    fp.open(filename);
+    for(int i = 0; i < d; i++){
+        fp << "f" << i << ",";
+    }
+    fp << "labels" << std::endl;
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < d; j++){
+            fp << data[i][j] << ",";
+        }
+        fp << labels[i];
+        fp << std::endl;
+    }
+    fp.close();
+}
+
+void Parser::copyData(float** output){
+    output = rdata;
 }

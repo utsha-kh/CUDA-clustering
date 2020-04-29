@@ -24,9 +24,9 @@ float KMeans::getDistance(std::vector<float> x1, std::vector<float> x2){
 float KMeans::getRMSE(void){
     float err = 0;
     for(int i = 0; i < n; i++){
-        err += sqrt(getDistance(x[i], u[whichSet[i]]));
+        err += getDistance(x[i], u[whichSet[i]]);
     }
-    return err;
+    return sqrt(err / n);
 }
 
 // add two vectors
@@ -41,7 +41,7 @@ std::vector<float> KMeans::addVector(std::vector<float> x1, std::vector<float> x
 // divide vector by scaler
 std::vector<float> KMeans::divideVector(std::vector<float> v, int s){
     for(int i = 0; i < v.size(); i++){
-        v[i] /= s;
+        v[i] /= (float)s;
     }
     return v;
 }
@@ -114,13 +114,17 @@ void KMeans::kMeansClustering(){
         assignDataPoints();
         updateCenters();
         float currentError = getRMSE();
-        converged = myAbs(previousError, currentError) < 0.01;
-        if(converged) break;
+        if(hasConverged(previousError, currentError)) break;
+        previousError = currentError;
         iterations++;
         std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
-        previousError = currentError;
     }
     std::cout << "# of iterations: " << iterations << std::endl;
+}
+
+// Checks convergence (d/dt < 0.5%)
+bool KMeans::hasConverged(float prevError, float currentError){
+    return myAbs(prevError, currentError) / prevError < 0.005;
 }
 
 std::vector<std::vector<float> > KMeans::getData(){
@@ -130,4 +134,6 @@ std::vector<std::vector<float> > KMeans::getData(){
 std::vector<int> KMeans::getLabel(){
     return whichSet;
 }
+
+
 

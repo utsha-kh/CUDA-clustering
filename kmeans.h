@@ -37,6 +37,9 @@ private:
     // Update each center of sets u_i to the average of all data points who belong to that set
     void updateCenters();
 
+    // Make decision if it's converged or not
+    bool hasConverged(float prevError, float currentError);
+
 public:
     KMeans(int n, int d, int k, std::vector<std::vector<float> > x);
 
