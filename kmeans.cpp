@@ -24,7 +24,7 @@ float KMeans::getDistance(std::vector<float> x1, std::vector<float> x2){
 float KMeans::getMSE(void){
     float err = 0;
     for(int i = 0; i < n; i++){
-        err += getDistance(x[i], u[whichSet[i]]);
+        err += getDistance(dataPoints[i], centeroids[labels[i]]);
     }
     return err / n;
 }
@@ -52,7 +52,7 @@ void KMeans::initCenters(){
     // generating a non-repeated random number isn't straightforward
     // so I'll do it later
     for(int i = 0; i < k; i++){
-        u[i] = x[i];
+        centeroids[i] = dataPoints[i];
     } 
 }
 
@@ -63,12 +63,12 @@ void KMeans::assignDataPoints(){
         int closest = 0;
         float minDistance = FLT_MAX;
         for(int j = 0; j < k; j++){
-            if(getDistance(x[i], u[j]) < minDistance){
+            if(getDistance(dataPoints[i], centeroids[j]) < minDistance){
                 closest = j;
-                minDistance = getDistance(x[i], u[j]);
+                minDistance = getDistance(dataPoints[i], centeroids[j]);
             }
         }
-        whichSet[i] = closest;
+        labels[i] = closest;
         //S[whichSet[i]].insert(x[i]);
     }
 }
@@ -79,22 +79,22 @@ void KMeans::updateCenters(){
     for(int i = 0; i < k; i++){
         std::vector<float> sum(d, 0); // a d-dimensional vector
         for(int j = 0; j < n; j++){
-            if(whichSet[j] == i){
-                sum = addVector(sum, x[j]);
+            if(labels[j] == i){
+                sum = addVector(sum, dataPoints[j]);
                 numVectors++;
             }
         }
-        u[i] = divideVector(sum, numVectors);
+        centeroids[i] = divideVector(sum, numVectors);
     }
 }
 
-KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float> > x){
+KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float> > dataPoints){
     this->n = n;
     this->d = d;
     this->k = k;
-    this->x = x;
-    this->whichSet.resize(n);
-    this->u.resize(k);
+    this->dataPoints = dataPoints;
+    this->labels.resize(n);
+    this->centeroids.resize(k);
     this->converged = false;
 }
 
@@ -128,11 +128,11 @@ bool KMeans::hasConverged(float prevError, float currentError){
 }
 
 std::vector<std::vector<float> > KMeans::getData(){
-    return x;
+    return dataPoints;
 }
 
 std::vector<int> KMeans::getLabel(){
-    return whichSet;
+    return labels;
 }
 
 
