@@ -14,6 +14,7 @@ int k;  // number of clusters
 __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k);
 __global__ void d_getMSE(float* dataPoints, int* labels, float* centeroids, float* ret, int n, int d, int k);
 __global__ void d_assignDataPoints(float* dataPoints, int* labels, float* centeroids, int n, int d, int k);
+__global__ void d_updateCenteroids(float* dataPoints, int* labels, float* centeroids, int* centeroids_sizes, int n, int d, int k);
 
 // return L2 distance between 2 points
 __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k){
@@ -194,6 +195,8 @@ void divideVector(float* x, int s, float* ret){
 
 // Update each center of sets u_i to the average of all data points who belong to that set
 void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
+
+    /* This is non-CUDA trivial implementation. This is faster with small k. 
     int count = 0;
     for(int i = 0; i < k; i++){
         float* sum = new float[d];
@@ -207,6 +210,7 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
         divideVector(sum, count, centeroids[i]);
         delete[] sum;
     }
+    */
 
     float *d_dataPoints, *d_centeroids; 
     int *d_labels;
@@ -240,7 +244,7 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
     cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroid_sizes, centeroids_sizes, sizeof(int) * k, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids_sizes, centeroids_sizes, sizeof(int) * k, cudaMemcpyHostToDevice);
 
     // call the kernel function to compute RMSE values in parallel
     // Here, I'm using 2D threads to parallelize double for loop so O(n * k) becomes O(1).
@@ -249,14 +253,15 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     int number_of_blocks = n / block_row_size + (n % block_row_size != 0);
         // when k = 3, a block's shape will be 341 x 3 x 1, so it will have 1023 threads in a block, with 2 index per block
     dim3 block_shape(block_row_size, block_col_size, 1);
-    d_updateCenteroids<<< number_of_blocks, block_shape >>(d_dataPoints, d_labels, d_centeroids, d_centeroid_sizes, n, d, k);
+        // in total, there will be n x k threads. 
+    d_updateCenteroids<<< number_of_blocks, block_shape >>>(d_dataPoints, d_labels, d_centeroids, d_centeroids_sizes, n, d, k);
     cudaDeviceSynchronize();
 
     // copy back the result from GPU to CPU
     cudaMemcpy(flattenCenteroids, d_centeroids, sizeof(float) * k * d, cudaMemcpyDeviceToHost);
-    cudaMemcpy(centeroids_sizes, d_centeroid_sizes, sizeof(int) * k, cudaMemcpyDeviceToHost);
+    cudaMemcpy(centeroids_sizes, d_centeroids_sizes, sizeof(int) * k, cudaMemcpyDeviceToHost);
 
-    // put the flattened form of centeroids back to matrix
+    // put the flattened form of centeroids back to matrix form
     for(int i = 0; i < k; i++){
         for(int j = 0; j < d; j++){
             centeroids[i][j] = flattenCenteroids[i * d + j];
@@ -272,7 +277,7 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     cudaFree(d_dataPoints);
     cudaFree(d_labels);
     cudaFree(d_centeroids);
-    cudaFree(d_centeroid_sizes);
+    cudaFree(d_centeroids_sizes);
     delete[] flattenDataPoints;
     delete[] flattenCenteroids;
     delete[] centeroids_sizes;
@@ -287,8 +292,8 @@ __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* center
         // if, the data Point at id_x belongs to the id_y-th centeroid
     if(labels[id_x] == id_y){
         for(int i = 0; i < d; i++){
-            atomicADD(&centeroids[id_y * d + i], dataPoints[id_x * d + i]);
-            atomicADD(&centeroids_sizes[id_y], 1);
+            atomicAdd(&centeroids[id_y * d + i], dataPoints[id_x * d + i]);
+            atomicAdd(&centeroids_sizes[id_y], 1);
         }
     }
 }
