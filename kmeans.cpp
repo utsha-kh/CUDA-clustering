@@ -4,6 +4,8 @@
 #include <set>
 #include <cfloat>
 #include <cmath>
+#include <random>
+#include <list>
 #include "kmeans.h"
 
 // Need to establish a way to detect convergence.
@@ -48,12 +50,42 @@ std::vector<float> KMeans::divideVector(std::vector<float> v, int s){
 
 // initialize each center values u_i to a randomly chosen data point
 void KMeans::initCenters(){
-    // Each center u[i] should be a random data point x[j], but 
-    // generating a non-repeated random number isn't straightforward
-    // so I'll do it later
-    for(int i = 0; i < k; i++){
-        centeroids[i] = dataPoints[i];
-    } 
+    // // Each center u[i] should be a random data point x[j], but 
+    // // generating a non-repeated random number isn't straightforward
+    // // so I'll do it later
+    // for(int i = 0; i < k; i++){
+    //     centeroids[i] = dataPoints[i];
+    // } 
+
+    std::cout << "initializing centeroids basaed on k-means++ Algorighm..." << std::endl;
+
+    std::random_device seedGenerator;
+    std::mt19937 randomEngine(seedGenerator());
+    std::uniform_int_distribution<> uniformRandom(0, n - 1);
+
+    int count = 1;
+    std::vector<float> weights(n);
+    // 0. pick a random centeroid c1.
+    centeroids[0] = dataPoints[uniformRandom(randomEngine)];
+    while(count < k){
+        // 1. for each data Points x, get Shortest Distance between x and a centeroid D(x)^2. This will be weight of that point. 
+        for(int i = 0; i < n; i++){
+            float minDistance = FLT_MAX;
+            for(int j = 0; j < count; j++){
+                if(getDistance(dataPoints[i], centeroids[j]) < minDistance){
+                    minDistance = getDistance(dataPoints[i], centeroids[j]);
+                }    
+            }
+            weights[i] = minDistance * minDistance; // save weight
+        }
+        // 2. pick a new cluster randomly from data points, with weighted sampling D(x)^2 / total D(x)^2
+        std::discrete_distribution<int> weightedRandom(weights.begin(), weights.end());
+        centeroids[count] = dataPoints[weightedRandom(randomEngine)];
+        count++;
+    }
+
+    std::cout << "Finished initialization!!" << std::endl;
+
 }
 
 // Assign each data point x_i to the closest center u_j
