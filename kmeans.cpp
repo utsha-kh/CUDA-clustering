@@ -84,7 +84,7 @@ void KMeans::initCenters(){
         count++;
     }
 
-    std::cout << "Finished initialization!!" << std::endl;
+    std::cout << "-Finished initialization!!" << std::endl;
 
 }
 
@@ -146,17 +146,17 @@ void KMeans::kMeansClustering(){
         assignDataPoints();
         updateCenters();
         float currentError = getMSE();
+        std::cout << "(iteration" << iterations << ") Total Error Now: " << std::setprecision(6) << currentError << std::endl;
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
         iterations++;
-        std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
     }
-    std::cout << "# of iterations: " << iterations << std::endl;
+    std::cout << "--Finished. # of iterations: " << iterations << std::endl;
 }
 
 // Checks convergence (d/dt < 0.5%)
 bool KMeans::hasConverged(float prevError, float currentError){
-    return myAbs(prevError, currentError) / prevError < 0.005;
+    return myAbs(prevError, currentError) / prevError < 0.0001;
 }
 
 std::vector<std::vector<float> > KMeans::getData(){

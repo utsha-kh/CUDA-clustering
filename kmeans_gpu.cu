@@ -307,7 +307,7 @@ float myAbs(float a, float b){
 
 // Checks convergence (d/dt < 0.5%)
 bool hasConverged(float prevError, float currentError){
-    return myAbs(prevError, currentError) / prevError < 0.005;
+    return myAbs(prevError, currentError) / prevError < 0.0001;
 }
 
 // Calling this function will do everything for the user
@@ -328,12 +328,12 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
         assignDataPoints(dataPoints, labels, centeroids);
         updateCenteroids(dataPoints, labels, centeroids);
         currentError = getMSE(dataPoints, labels, centeroids);
+        std::cout << "(iteration" << iterations << ") Total Error Now: " << std::setprecision(6) << currentError << std::endl;
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
         iterations++;
-        std::cout << "Total Error Now: " << std::setprecision(6) << currentError << std::endl;
-    }
-    std::cout << "# of iterations: " << iterations << std::endl;
+        }
+    std::cout << "--Finished. # of iterations: " << iterations << std::endl;
 
     // free memory
     for(int i = 0; i < k; i++){
