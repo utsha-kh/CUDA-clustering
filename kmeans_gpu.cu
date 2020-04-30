@@ -58,8 +58,8 @@ float getMSE(float** dataPoints, int* labels, float** centeroids){
     cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
     
     // call the kernel function to compute RMSE values in parallel
-    int block_size = n / THREAD_SIZE + (n % THREAD_SIZE != 1);
-    d_getMSE<<<block_size, THREAD_SIZE>>>(d_dataPoints, d_labels, d_centeroids, d_err, n, d, k);
+    int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
+    d_getMSE<<<block_size, THREAD_PER_BLOCK>>>(d_dataPoints, d_labels, d_centeroids, d_err, n, d, k);
     cudaDeviceSynchronize();
 
     // copy back the result from GPU to CPU
@@ -79,7 +79,7 @@ float getMSE(float** dataPoints, int* labels, float** centeroids){
     delete[] flattenDataPoints;
     delete[] flattenCenteroids;
 
-    // return actual Root Mean of Squared Errors.
+    // return actual Mean of Squared Errors.
     return error / n;
 }
 
@@ -133,8 +133,8 @@ void assignDataPoints(float** dataPoints, int* labels, float** centeroids){
     cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
     
     // call the kernel function to compute RMSE values in parallel
-    int block_size = n / THREAD_SIZE + (n % THREAD_SIZE != 1);
-    d_assignDataPoints<<<block_size, THREAD_SIZE>>>(d_dataPoints, d_labels, d_centeroids, n, d, k);
+    int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
+    d_assignDataPoints<<<block_size, THREAD_PER_BLOCK>>>(d_dataPoints, d_labels, d_centeroids, n, d, k);
     cudaDeviceSynchronize();
 
     // copy back the result from GPU to CPU
@@ -207,13 +207,91 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
         divideVector(sum, count, centeroids[i]);
         delete[] sum;
     }
+
+    float *d_dataPoints, *d_centeroids; 
+    int *d_labels;
+    int *d_centeroids_sizes;
+    int *centeroids_sizes = new int[k]; // how many data points are avergaged to count each centeroid
+
+    // Allocate memory on GPU
+    cudaMalloc(&d_dataPoints, sizeof(float) * n * d);
+    cudaMalloc(&d_labels, sizeof(int) * n);
+    cudaMalloc(&d_centeroids, sizeof(float) * k * d);    
+    cudaMalloc(&d_centeroids_sizes, sizeof(int) * k);
+
+    // Flattening both matrix to ease copying to GPU
+    float* flattenDataPoints = new float[n * d];
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < d; j++){
+            flattenDataPoints[i * d + j] = dataPoints[i][j];
+        }
+    }
+    float* flattenCenteroids = new float[n * k];
+    for(int i = 0; i < k; i++){
+        for(int j = 0; j < d; j++){
+            flattenCenteroids[i * d + j] = 0; // reset values before passing to GPU. centeroids[i][j];
+        }
+    }
+    for(int i = 0; i < k; i++){
+        centeroids_sizes[i] = 0;    // reset values before passing to GPU. 
+    }
+
+    // copy flattened data into GPU
+    cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroid_sizes, centeroids_sizes, sizeof(int) * k, cudaMemcpyHostToDevice);
+
+    // call the kernel function to compute RMSE values in parallel
+    // Here, I'm using 2D threads to parallelize double for loop so O(n * k) becomes O(1).
+    int block_row_size = THREAD_PER_BLOCK / k;  //e.g. if k == 3, this is 1024 / 3 = 341
+    int block_col_size = k;
+    int number_of_blocks = n / block_row_size + (n % block_row_size != 0);
+        // when k = 3, a block's shape will be 341 x 3 x 1, so it will have 1023 threads in a block, with 2 index per block
+    dim3 block_shape(block_row_size, block_col_size, 1);
+    d_updateCenteroids<<< number_of_blocks, block_shape >>(d_dataPoints, d_labels, d_centeroids, d_centeroid_sizes, n, d, k);
+    cudaDeviceSynchronize();
+
+    // copy back the result from GPU to CPU
+    cudaMemcpy(flattenCenteroids, d_centeroids, sizeof(float) * k * d, cudaMemcpyDeviceToHost);
+    cudaMemcpy(centeroids_sizes, d_centeroid_sizes, sizeof(int) * k, cudaMemcpyDeviceToHost);
+
+    // put the flattened form of centeroids back to matrix
+    for(int i = 0; i < k; i++){
+        for(int j = 0; j < d; j++){
+            centeroids[i][j] = flattenCenteroids[i * d + j];
+        }
+    }
+
+    // the centeroids computed by GPU was just sum of all points. Still needs to be divided by counts. 
+    for(int i = 0; i < k; i++){
+        divideVector(centeroids[i], centeroids_sizes[i], centeroids[i]);
+    }
+
+    // deallocate GPU memory
+    cudaFree(d_dataPoints);
+    cudaFree(d_labels);
+    cudaFree(d_centeroids);
+    cudaFree(d_centeroid_sizes);
+    delete[] flattenDataPoints;
+    delete[] flattenCenteroids;
+    delete[] centeroids_sizes;
 }
 
 // kernel of above function
-__global__ void d_updateCenters(float** dataPoints, int* labels, float** centeroids){
-    return;
+__global__ void d_updateCenteroids(float* dataPoints, int* labels, float* centeroids, int* centeroids_sizes, int n, int d, int k){
+        // Here, each thread has a 2D index (id_x, id_y). Range: id_x = [0, n -1], id_y = [0, k -1]. 
+    int id_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int id_y = blockIdx.y * blockDim.y + threadIdx.y;
+    if(id_x >= n || id_y >= k) return;
+        // if, the data Point at id_x belongs to the id_y-th centeroid
+    if(labels[id_x] == id_y){
+        for(int i = 0; i < d; i++){
+            atomicADD(&centeroids[id_y * d + i], dataPoints[id_x * d + i]);
+            atomicADD(&centeroids_sizes[id_y], 1);
+        }
+    }
 }
-
 
 float myAbs(float a, float b){
     if(a > b)
@@ -229,7 +307,7 @@ bool hasConverged(float prevError, float currentError){
 
 // Calling this function will do everything for the user
 void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
-    n = n_; d = d_; k = k_;
+    n = n_; d = d_; k = k_; // copy arguments to global variables
 
     float** centeroids = new float*[k];
     for(int i = 0; i < k; i++){
