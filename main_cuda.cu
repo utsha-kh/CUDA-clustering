@@ -10,8 +10,10 @@
 int main(int argc, char** argv){
 
     // read data from a csv file
+    std::cout << "Loading input file..." << std::endl;
     const char *filename = "input.csv";
     Parser parser(filename);
+    std::cout << "--Finished loading!" << std::endl;
 
     int n = parser.rows;        // number of data points
     int d = parser.cols;        // dimention of input data (usually 2, for 2D data)
@@ -37,7 +39,10 @@ int main(int argc, char** argv){
     std::cout << "Execution Time: " << duration / 1000 << " [ms]" << std::endl;
 
     // write result to a new csv file
+    std::cout << "Writing the result to \"result.csv\"... " << std::endl;
     parser.toCSV("result_cuda.csv", data, labels, n, d);
+    std::cout << "--Finished writing!" << std::endl;
+    
     return 0;
 
 }

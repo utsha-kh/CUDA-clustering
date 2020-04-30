@@ -4,6 +4,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cuda.h>
+#include <random>
 #include "kmeans_gpu.h"
 #include "parser.h"
 
@@ -15,6 +16,7 @@ __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, in
 __global__ void d_getMSE(float* dataPoints, int* labels, float* centeroids, float* ret, int n, int d, int k);
 __global__ void d_assignDataPoints(float* dataPoints, int* labels, float* centeroids, int n, int d, int k);
 __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* centeroids, int* centeroids_sizes, int n, int d, int k);
+__global__ void d_getWeights(float* dataPoints, float* centeroids, float* weights, int n, int d, int count);
 
 // return L2 distance between 2 points
 __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k){
@@ -101,6 +103,107 @@ void initCenters(float** dataPoints, float** centeroids){
             centeroids[i][j] = dataPoints[i][j];
         }
     } 
+    
+    // float *d_dataPoints, *d_centeroids, *d_weights; 
+
+    // int count = 1;
+    // std::vector<float> weights_vec(n);
+    // float* weights = new float[n];
+
+    // std::cout << "Initializing centeroids basaed on k-means++ Algorighm..." << std::endl;
+
+    // std::random_device seedGenerator;
+    // std::mt19937 randomEngine(seedGenerator());
+    // std::uniform_int_distribution<> uniformRandom(0, n - 1);
+
+    // // 0. pick a random centeroid c1.
+    // centeroids[0] = dataPoints[uniformRandom(randomEngine)];
+
+    // // Allocate memory on GPU
+    // cudaMalloc(&d_dataPoints, sizeof(float) * n * d);
+    // cudaMalloc(&d_centeroids, sizeof(float) * k * d);
+    // cudaMalloc(&d_weights, sizeof(float) * n);    
+
+    // // Flattening both matrix to ease copying to GPU
+    // float* flattenDataPoints = new float[n * d];
+    // for(int i = 0; i < n; i++){
+    //     for(int j = 0; j < d; j++){
+    //         flattenDataPoints[i * d + j] = dataPoints[i][j];
+    //     }
+    // }
+    // float* flattenCenteroids = new float[n * k];
+    // for(int i = 0; i < k; i++){
+    //     for(int j = 0; j < d; j++){
+    //         flattenCenteroids[i * d + j] = centeroids[i][j];
+    //     }
+    // }
+
+    // // copy flattened data into GPU
+    // cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    // cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    
+    // int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
+
+    // while(count < k){
+    //     // 1. for each data Points x, get Shortest Distance between x and a centeroid D(x)^2. This will be weight of that point. 
+    //     d_getWeights<<<block_size, THREAD_PER_BLOCK>>>(d_dataPoints, d_centeroids, d_weights, n, d, count);
+    //     cudaMemcpy(flattenCenteroids, d_centeroids, sizeof(float) * count * d, cudaMemcpyDeviceToHost);
+    //     for(int i = 0; i < count; i++){
+    //         for(int j = 0; j < d; j++){
+    //             centeroids[i][j] = flattenCenteroids[i * d + j];
+    //         }
+    //     }    
+    //     // 2. pick a new cluster randomly from data points, with weighted sampling D(x)^2 / total D(x)^2
+    //     for(int i = 0; i < n; i++){
+    //         weights_vec[i] = weights[i];
+    //     }
+    //     std::discrete_distribution<int> weightedRandom(weights_vec.begin(), weights_vec.end());
+    //     centeroids[count] = dataPoints[weightedRandom(randomEngine)];
+    //     for(int i = 0; i < k; i++){
+    //         for(int j = 0; j < d; j++){
+    //             flattenCenteroids[i * d + j] = centeroids[i][j];
+    //         }
+    //     }   
+    //     cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d,cudaMemcpyHostToDevice);
+    //     count++;
+    // }
+
+    // for(int i = 0; i < k; i++){
+    //     for(int j = 0; j < d; j++){
+    //         centeroids[i][j] = flattenCenteroids[i * d + j];
+    //     }
+    // } 
+
+    // std::cout << "--Finished initialization!!" << std::endl;
+    // for (int i = 0; i < k; i++){
+    //     std::cout << centeroids[i][0] << "   " << centeroids[i][1] << std::endl;
+    // }
+
+    // // deallocate GPU memory
+    // cudaFree(d_dataPoints);
+    // cudaFree(d_weights);
+    // cudaFree(d_centeroids);
+    // delete[] flattenDataPoints;
+    // delete[] flattenCenteroids;
+    // delete[] weights; 
+
+}
+
+// kernel of above function
+__global__ void d_getWeights(float* dataPoints, float* centeroids, float* weights, int n, int d, int count){
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    if(id >= n) return;
+
+    float minDistance = FLT_MAX;
+    float dist_i = 0;
+    // find the closest centeroid from this dataPoint (&dataPoint[id * d]), and store the distance
+    for(int i = 0; i < count; i++){
+        d_getDistance(&dataPoints[id * d], &centeroids[i * d], &dist_i, n, d, count);
+        if(dist_i < minDistance){
+            minDistance = dist_i;
+        }
+    }
+    weights[id] = minDistance;
 }
 
 // Assign each data point to the closest centeroid, and store the result in *labels

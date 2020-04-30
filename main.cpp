@@ -12,8 +12,10 @@
 int main (int argc, char** argv) {
 
     // read data from an input file
+    std::cout << "Loading input file..." << std::endl;
     const char *filename = "input.csv";
     Parser parser(filename);
+    std::cout << "--Finished loading!" << std::endl;
 
     int k = 3;
     // an option to input k as an arugument
@@ -36,7 +38,9 @@ int main (int argc, char** argv) {
     std::cout << "Execution Time: " << duration / 1000 << " [ms]" << std::endl;
 
     // write result to a new csv file
+    std::cout << "Writing the result to \"result.csv\"... " << std::endl;
     parser.toCSV("result.csv", module.getData(), module.getLabel());
+    std::cout << "--Finished writing!" << std::endl;
 
     return 0;
 }
