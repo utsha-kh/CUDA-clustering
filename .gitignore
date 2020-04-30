@@ -2,7 +2,7 @@
 .ipynb_checkpoints/
 .vscode/
 *.csv
-*.ipynb
 clustering
 cuda_clustering
 test
+ImageSegmentation.ipynb
