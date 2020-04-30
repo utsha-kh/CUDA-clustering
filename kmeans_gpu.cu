@@ -18,7 +18,7 @@ __global__ void d_assignDataPoints(float* dataPoints, int* labels, float* center
 __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* centeroids, int* centeroids_sizes, int n, int d, int k);
 __global__ void d_getWeights(float* dataPoints, float* centeroids, float* weights, int n, int d, int count);
 
-// return L2 distance between 2 points
+// return L2 distance squared between 2 points
 __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, int k){
 	float dist = 0;
     for(int i = 0; i < d; i++){
@@ -27,7 +27,7 @@ __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, in
     *ret = dist; 
 }
 
-// return current Mean Squared Error value of all points. This is needed to detect convergence, but not essential in k-means algorithm.
+// return current Mean Squared Error value of all points. This is needed to detect convergence.
 float getMSE(float** dataPoints, int* labels, float** centeroids){
 
     float error = 0;
@@ -93,16 +93,8 @@ __global__ void d_getMSE(float* dataPoints, int* labels, float* centeroids, floa
     d_getDistance(&dataPoints[id * d], &centeroids[labels[id] * d], &err[id], n, d, k); 
 }
 
-// initialize each center values u_i to a randomly chosen data point
+// Initialize the centeroids, based on k-means++ algorithm.
 void initCenters(float** dataPoints, float** centeroids){
-    // Each center u[i] should be a random data point x[j], but 
-    // generating a non-repeated random number isn't straightforward
-    // so I'll do it later
-    // for(int i = 0; i < k; i++){
-    //     for(int j = 0; j < d; j++){
-    //         centeroids[i][j] = dataPoints[i][j];
-    //     }
-    // } 
     
     float *d_dataPoints, *d_centeroids, *d_weights; 
 
@@ -117,8 +109,10 @@ void initCenters(float** dataPoints, float** centeroids){
     std::uniform_int_distribution<> uniformRandom(0, n - 1);
 
     // 0. pick a random centeroid c1.
-    centeroids[0] = dataPoints[uniformRandom(randomEngine)];
-
+    int uniformLottery = uniformRandom(randomEngine);
+    for(int i = 0; i < d; i++){
+        centeroids[0][i] = dataPoints[uniformLottery][i];
+    }
     // Allocate memory on GPU
     cudaMalloc(&d_dataPoints, sizeof(float) * n * d);
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);
@@ -164,13 +158,6 @@ void initCenters(float** dataPoints, float** centeroids){
         }   
         cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
         count++;
-        for(int i = 0; i < k; i++){
-            std::cout << "new centeroid[" << i << "] : (" << centeroids[i][0] << ", " << centeroids[i][1] << ")" << std::endl;
-        }
-        for(int i = 0; i < 20; i++){
-            std::cout << "point[" << i << "] : (" << dataPoints[i][0] << ", " << dataPoints[i][1] << ")" << std::endl;
-            std::cout << "    weight = " << weights[i] << std::endl;
-        }
     }
 
     for(int i = 0; i < k; i++){
@@ -180,9 +167,6 @@ void initCenters(float** dataPoints, float** centeroids){
     } 
 
     std::cout << "--Finished initialization!!" << std::endl;
-    for (int i = 0; i < k; i++){
-        std::cout << centeroids[i][0] << "   " << centeroids[i][1] << std::endl;
-    }
 
     // deallocate GPU memory
     cudaFree(d_dataPoints);
@@ -394,9 +378,6 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     delete[] flattenCenteroids;
     delete[] centeroids_sizes;
 
-    for(int i = 0; i < k; i++){
-        std::cout << "new centeroid[" << i << "] : (" << centeroids[i][0] << ", " << centeroids[i][1] << ")" << std::endl;
-    }
 }
 
 // kernel of above function
@@ -414,6 +395,7 @@ __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* center
     }
 }
 
+// need this to check convergence
 float myAbs(float a, float b){
     if(a > b)
         return a - b;
@@ -422,8 +404,9 @@ float myAbs(float a, float b){
 }
 
 // Checks convergence (d/dt < 0.5%)
+// the CONVERGENCE_RATE is defined in kmeans_gpu.h
 bool hasConverged(float prevError, float currentError){
-    return myAbs(prevError, currentError) / prevError < 0.0001;
+    return (prevError - currentError) / prevError < CONVERGENCE_RATE || (prevError - currentError) / prevError > -CONVERGENCE_RATE;
 }
 
 // Calling this function will do everything for the user
@@ -456,11 +439,4 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
         delete[] centeroids[i];
     }
     delete[] centeroids;
-}
-
-void printStatus(float** dataPoints, int* labels, float** centeroids){
-    for(int i = 0; i < 5; i++){
-        std::cout << "point[" << i << "] : (" << dataPoints[i][0] << ", " << dataPoints[i][1] << ")" << std::endl;
-        std::cout << "    closest = " << centeroids[labels[i]][0] << ", " << centeroids[labels[i]][1] << ")" << std::endl;
-    }
 }

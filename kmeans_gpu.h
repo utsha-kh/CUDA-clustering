@@ -34,6 +34,7 @@ runtimeVersion : 10000
 
 #define THREAD_PER_BLOCK 1024
 #define MAX_ITERATIONS 100
+#define CONVERGENCE_RATE 0.0001
 
 void kMeansClustering(float** dataPoints, int* labels, int n, int d, int k);
 
