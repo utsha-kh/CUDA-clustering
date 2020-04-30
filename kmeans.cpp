@@ -8,11 +8,6 @@
 #include <list>
 #include "kmeans.h"
 
-// Need to establish a way to detect convergence.
-// Need to implement random selection to initialize centers.
-
-// Also, need a way to visualize vectors so that results can be easily seen.
-
 // return L2 distance between two points
 float KMeans::getDistance(std::vector<float> x1, std::vector<float> x2){
     float dist = 0;
@@ -48,14 +43,8 @@ std::vector<float> KMeans::divideVector(std::vector<float> v, int s){
     return v;
 }
 
-// initialize each center values u_i to a randomly chosen data point
+// Initialize the centeroids, based on k-means++ algorithm.
 void KMeans::initCenters(){
-    // Each center u[i] should be a random data point x[j], but 
-    // generating a non-repeated random number isn't straightforward
-    // so I'll do it later
-    // for(int i = 0; i < k; i++){
-    //     centeroids[i] = dataPoints[i];
-    // } 
 
     std::cout << "Initializing centeroids basaed on k-means++ Algorighm..." << std::endl;
 
@@ -86,16 +75,11 @@ void KMeans::initCenters(){
 
     std::cout << "-Finished initialization!!" << std::endl;
 
-    for (int i = 0; i < k; i++){
-        std::cout << centeroids[i][0] << "   " << centeroids[i][1] << std::endl;
-    }
-
 }
 
 // Assign each data point x_i to the closest center u_j
 void KMeans::assignDataPoints(){
     for(int i = 0; i < n; i++){
-        //S[whichSet[i]].erase(x[i]);
         int closest = 0;
         float minDistance = FLT_MAX;
         for(int j = 0; j < k; j++){
@@ -105,11 +89,6 @@ void KMeans::assignDataPoints(){
             }
         }
         labels[i] = closest;
-        //S[whichSet[i]].insert(x[i]);
-    }
-    for(int i = 0; i < 5; i++){
-        std::cout << "point[" << i << "] : (" << dataPoints[i][0] << ", " << dataPoints[i][1] << ")" << std::endl;
-        std::cout << "    closest = " << centeroids[labels[i]][0] << ", " << centeroids[labels[i]][1] << ")" << std::endl;
     }
 }
 
@@ -126,9 +105,6 @@ void KMeans::updateCenters(){
         }
         centeroids[i] = divideVector(sum, numVectors);
         numVectors = 0;
-    }
-    for(int i = 0; i < k; i++){
-        std::cout << "new centeroid[" << i << "] : (" << centeroids[i][0] << ", " << centeroids[i][1] << ")" << std::endl;
     }
 }
 

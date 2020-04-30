@@ -289,25 +289,6 @@ void divideVector(float* x, int s, float* ret){
 // Update each center of sets u_i to the average of all data points who belong to that set
 void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
 
-     /* This is non-CUDA trivial implementation. This is faster with small k. 
-    int count = 0;
-    for(int i = 0; i < k; i++){
-        float* sum = new float[d];
-        for(int l = 0; l < d; l++) sum[l] = 0;
-        for(int j = 0; j < n; j++){
-            if(labels[j] == i){
-                addVector(sum, dataPoints[j], sum);
-                count++;
-            }
-        }
-        divideVector(sum, count, centeroids[i]);
-        delete[] sum;
-        count = 0;
-    }
-
-
-    */
-
     float *d_dataPoints, *d_centeroids; 
     int *d_labels;
     int *d_centeroids_sizes;
