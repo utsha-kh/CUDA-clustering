@@ -376,18 +376,11 @@ __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* center
     }
 }
 
-// need this to check convergence
-float myAbs(float a, float b){
-    if(a > b)
-        return a - b;
-    else
-        return b - a;
-}
-
 // Checks convergence (d/dt < 0.5%)
 // the CONVERGENCE_RATE is defined in kmeans_gpu.h
 bool hasConverged(float prevError, float currentError){
-    return (prevError - currentError) / prevError < CONVERGENCE_RATE || (prevError - currentError) / prevError > -CONVERGENCE_RATE;
+    float diff = (prevError - currentError) / prevError;
+    return -CONVERGENCE_RATE < diff && diff < CONVERGENCE_RATE;
 }
 
 // Calling this function will do everything for the user

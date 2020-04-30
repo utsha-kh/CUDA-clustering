@@ -118,13 +118,6 @@ KMeans::KMeans(int n, int d, int k, std::vector<std::vector<float> > dataPoints)
     this->converged = false;
 }
 
-float myAbs(float a, float b){
-    if(a > b)
-        return a - b;
-    else
-        return b - a;
-}
-
 // Calling this function will do everything for the user
 void KMeans::kMeansClustering(){
     initCenters();
@@ -144,7 +137,8 @@ void KMeans::kMeansClustering(){
 
 // Checks convergence (d/dt < 0.5%)
 bool KMeans::hasConverged(float prevError, float currentError){
-    return myAbs(prevError, currentError) / prevError < 0.0001;
+    float diff = (prevError - currentError) / prevError;
+    return -CONVERGENCE_RATE < diff && diff < CONVERGENCE_RATE;
 }
 
 std::vector<std::vector<float> > KMeans::getData(){

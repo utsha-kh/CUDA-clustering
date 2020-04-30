@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 
+#define CONVERGENCE_RATE 0.0001
+
 class KMeans{
 private:
     int n;  // number of data points
