@@ -39,7 +39,7 @@ int main(int argc, char** argv){
     std::cout << "Execution Time: " << duration / 1000 << " [ms]" << std::endl;
 
     // write result to a new csv file
-    std::cout << "Writing the result to \"result.csv\"... " << std::endl;
+    std::cout << "Writing the result to \"result_cuda.csv\"... " << std::endl;
     parser.toCSV("result_cuda.csv", data, labels, n, d);
     std::cout << "--Finished writing!" << std::endl;
     

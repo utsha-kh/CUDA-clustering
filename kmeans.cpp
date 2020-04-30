@@ -53,38 +53,42 @@ void KMeans::initCenters(){
     // Each center u[i] should be a random data point x[j], but 
     // generating a non-repeated random number isn't straightforward
     // so I'll do it later
-    for(int i = 0; i < k; i++){
-        centeroids[i] = dataPoints[i];
-    } 
+    // for(int i = 0; i < k; i++){
+    //     centeroids[i] = dataPoints[i];
+    // } 
 
-    // std::cout << "Initializing centeroids basaed on k-means++ Algorighm..." << std::endl;
+    std::cout << "Initializing centeroids basaed on k-means++ Algorighm..." << std::endl;
 
-    // std::random_device seedGenerator;
-    // std::mt19937 randomEngine(seedGenerator());
-    // std::uniform_int_distribution<> uniformRandom(0, n - 1);
+    std::random_device seedGenerator;
+    std::mt19937 randomEngine(seedGenerator());
+    std::uniform_int_distribution<> uniformRandom(0, n - 1);
 
-    // int count = 1;
-    // std::vector<float> weights(n);
-    // // 0. pick a random centeroid c1.
-    // centeroids[0] = dataPoints[uniformRandom(randomEngine)];
-    // while(count < k){
-    //     // 1. for each data Points x, get Shortest Distance between x and a centeroid D(x)^2. This will be weight of that point. 
-    //     for(int i = 0; i < n; i++){
-    //         float minDistance = FLT_MAX;
-    //         for(int j = 0; j < count; j++){
-    //             if(getDistance(dataPoints[i], centeroids[j]) < minDistance){
-    //                 minDistance = getDistance(dataPoints[i], centeroids[j]);
-    //             }    
-    //         }
-    //         weights[i] = minDistance; // save weight
-    //     }
-    //     // 2. pick a new cluster randomly from data points, with weighted sampling D(x)^2 / total D(x)^2
-    //     std::discrete_distribution<int> weightedRandom(weights.begin(), weights.end());
-    //     centeroids[count] = dataPoints[weightedRandom(randomEngine)];
-    //     count++;
-    // }
+    int count = 1;
+    std::vector<float> weights(n);
+    // 0. pick a random centeroid c1.
+    centeroids[0] = dataPoints[uniformRandom(randomEngine)];
+    while(count < k){
+        // 1. for each data Points x, get Shortest Distance between x and a centeroid D(x)^2. This will be weight of that point. 
+        for(int i = 0; i < n; i++){
+            float minDistance = FLT_MAX;
+            for(int j = 0; j < count; j++){
+                if(getDistance(dataPoints[i], centeroids[j]) < minDistance){
+                    minDistance = getDistance(dataPoints[i], centeroids[j]);
+                }    
+            }
+            weights[i] = minDistance; // save weight
+        }
+        // 2. pick a new cluster randomly from data points, with weighted sampling D(x)^2 / total D(x)^2
+        std::discrete_distribution<int> weightedRandom(weights.begin(), weights.end());
+        centeroids[count] = dataPoints[weightedRandom(randomEngine)];
+        count++;
+    }
 
-    // std::cout << "-Finished initialization!!" << std::endl;
+    std::cout << "-Finished initialization!!" << std::endl;
+
+    for (int i = 0; i < k; i++){
+        std::cout << centeroids[i][0] << "   " << centeroids[i][1] << std::endl;
+    }
 
 }
 
@@ -103,6 +107,10 @@ void KMeans::assignDataPoints(){
         labels[i] = closest;
         //S[whichSet[i]].insert(x[i]);
     }
+    for(int i = 0; i < 5; i++){
+        std::cout << "point[" << i << "] : (" << dataPoints[i][0] << ", " << dataPoints[i][1] << ")" << std::endl;
+        std::cout << "    closest = " << centeroids[labels[i]][0] << ", " << centeroids[labels[i]][1] << ")" << std::endl;
+    }
 }
 
 // Update each center of sets u_i to the average of all data points who belong to that set
@@ -117,6 +125,10 @@ void KMeans::updateCenters(){
             }
         }
         centeroids[i] = divideVector(sum, numVectors);
+        numVectors = 0;
+    }
+    for(int i = 0; i < k; i++){
+        std::cout << "new centeroid[" << i << "] : (" << centeroids[i][0] << ", " << centeroids[i][1] << ")" << std::endl;
     }
 }
 
