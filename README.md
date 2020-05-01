@@ -1,4 +1,4 @@
-# K-Means clustering
+# K-Means clustering with CUDA
 
 In this project, I implemented K-Means clustering in parallel, using CUDA. In my implementaion, I used CUDA as much as possible, and achieved more than 60x performance on large dataset.
 
