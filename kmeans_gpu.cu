@@ -28,7 +28,7 @@ __device__ void d_getDistance(float* x1, float* x2, float *ret, int n, int d, in
 }
 
 // return current Mean Squared Error value of all points. This is needed to detect convergence.
-float getMSE(float** dataPoints, int* labels, float** centeroids){
+float getMSE(float* dataPoints, int* labels, float* centeroids){
 
     float error = 0;
     float* err = new float[n];  // distance between each dataPoints to centeroids
@@ -41,24 +41,11 @@ float getMSE(float** dataPoints, int* labels, float** centeroids){
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);
     cudaMalloc(&d_err, sizeof(float) * n);    
 
-    // Flattening both matrix to ease copying to GPU
-    float* flattenDataPoints = new float[n * d];
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < d; j++){
-            flattenDataPoints[i * d + j] = dataPoints[i][j];
-        }
-    }
-    float* flattenCenteroids = new float[n * k];
-    for(int i = 0; i < k; i++){
-        for(int j = 0; j < d; j++){
-            flattenCenteroids[i * d + j] = centeroids[i][j];
-        }
-    }
 
     // copy flattened data into GPU
-    cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
     
     // call the kernel function to compute RMSE values in parallel
     int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
@@ -79,8 +66,6 @@ float getMSE(float** dataPoints, int* labels, float** centeroids){
     cudaFree(d_labels);
     cudaFree(d_centeroids);
     cudaFree(d_err);
-    delete[] flattenDataPoints;
-    delete[] flattenCenteroids;
 
     // return actual Mean of Squared Errors.
     return error / n;
@@ -94,7 +79,7 @@ __global__ void d_getMSE(float* dataPoints, int* labels, float* centeroids, floa
 }
 
 // Initialize the centeroids, based on k-means++ algorithm.
-void initCenters(float** dataPoints, float** centeroids){
+void initCenters(float* dataPoints, float* centeroids){
     
     float *d_dataPoints, *d_centeroids, *d_weights; 
 
@@ -111,30 +96,17 @@ void initCenters(float** dataPoints, float** centeroids){
     // 0. pick a random centeroid c1.
     int uniformLottery = uniformRandom(randomEngine);
     for(int i = 0; i < d; i++){
-        centeroids[0][i] = dataPoints[uniformLottery][i];
+        centeroids[d] = dataPoints[uniformLottery * d + i];
     }
     // Allocate memory on GPU
     cudaMalloc(&d_dataPoints, sizeof(float) * n * d);
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);
     cudaMalloc(&d_weights, sizeof(float) * n);    
 
-    // Flattening both matrix to ease copying to GPU
-    float* flattenDataPoints = new float[n * d];
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < d; j++){
-            flattenDataPoints[i * d + j] = dataPoints[i][j];
-        }
-    }
-    float* flattenCenteroids = new float[n * k];
-    for(int i = 0; i < k; i++){
-        for(int j = 0; j < d; j++){
-            flattenCenteroids[i * d + j] = centeroids[i][j];
-        }
-    }
 
     // copy flattened data into GPU
-    cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
     
     int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
 
@@ -149,22 +121,11 @@ void initCenters(float** dataPoints, float** centeroids){
         std::discrete_distribution<int> weightedRandom(weights_vec.begin(), weights_vec.end());
         int weightedLottery = weightedRandom(randomEngine);
         for(int i = 0; i < d; i++){
-            centeroids[count][i] = dataPoints[weightedLottery][i];
+            centeroids[count * d + i] = dataPoints[weightedLottery * d + i];
         }
-        for(int i = 0; i < k; i++){
-            for(int j = 0; j < d; j++){
-                flattenCenteroids[i * d + j] = centeroids[i][j];
-            }
-        }   
-        cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
         count++;
     }
-
-    for(int i = 0; i < k; i++){
-        for(int j = 0; j < d; j++){
-            centeroids[i][j] = flattenCenteroids[i * d + j];
-        }
-    } 
 
     std::cout << "--Finished initialization!!" << std::endl;
 
@@ -172,8 +133,6 @@ void initCenters(float** dataPoints, float** centeroids){
     cudaFree(d_dataPoints);
     cudaFree(d_weights);
     cudaFree(d_centeroids);
-    delete[] flattenDataPoints;
-    delete[] flattenCenteroids;
     delete[] weights; 
 
 }
@@ -196,7 +155,7 @@ __global__ void d_getWeights(float* dataPoints, float* centeroids, float* weight
 }
 
 // Assign each data point to the closest centeroid, and store the result in *labels
-void assignDataPoints(float** dataPoints, int* labels, float** centeroids){
+void assignDataPoints(float* dataPoints, int* labels, float* centeroids){
 
     float *d_dataPoints, *d_centeroids; 
     int *d_labels;
@@ -206,24 +165,10 @@ void assignDataPoints(float** dataPoints, int* labels, float** centeroids){
     cudaMalloc(&d_labels, sizeof(int) * n);
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);    
 
-    // Flattening both matrix to ease copying to GPU
-    float* flattenDataPoints = new float[n * d];
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < d; j++){
-            flattenDataPoints[i * d + j] = dataPoints[i][j];
-        }
-    }
-    float* flattenCenteroids = new float[n * k];
-    for(int i = 0; i < k; i++){
-        for(int j = 0; j < d; j++){
-            flattenCenteroids[i * d + j] = centeroids[i][j];
-        }
-    }
-
     // copy flattened data into GPU
-    cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
     
     // call the kernel function to compute RMSE values in parallel
     int block_size = n / THREAD_PER_BLOCK + (n % THREAD_PER_BLOCK != 0);
@@ -237,9 +182,6 @@ void assignDataPoints(float** dataPoints, int* labels, float** centeroids){
     cudaFree(d_dataPoints);
     cudaFree(d_labels);
     cudaFree(d_centeroids);
-    delete[] flattenDataPoints;
-    delete[] flattenCenteroids;
-
 }
 
 // kernal of above function
@@ -287,7 +229,7 @@ void divideVector(float* x, int s, float* ret){
 }
 
 // Update each center of sets u_i to the average of all data points who belong to that set
-void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
+void updateCenteroids(float* dataPoints, int* labels, float* centeroids){
 
     float *d_dataPoints, *d_centeroids; 
     int *d_labels;
@@ -300,27 +242,18 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);    
     cudaMalloc(&d_centeroids_sizes, sizeof(int) * k);
 
-    // Flattening both matrix to ease copying to GPU
-    float* flattenDataPoints = new float[n * d];
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < d; j++){
-            flattenDataPoints[i * d + j] = dataPoints[i][j];
-        }
-    }
-    float* flattenCenteroids = new float[n * k];
+    // reset values before passing to GPU. 
     for(int i = 0; i < k; i++){
+        centeroids_sizes[i] = 0; 
         for(int j = 0; j < d; j++){
-            flattenCenteroids[i * d + j] = 0; // reset values before passing to GPU. centeroids[i][j];
+            centeroids[i * d + j] = 0;
         }
-    }
-    for(int i = 0; i < k; i++){
-        centeroids_sizes[i] = 0;    // reset values before passing to GPU. 
     }
 
     // copy flattened data into GPU
-    cudaMemcpy(d_dataPoints, flattenDataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_centeroids, flattenCenteroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice); // d_centeroids are initialized to 0 here
     cudaMemcpy(d_centeroids_sizes, centeroids_sizes, sizeof(int) * k, cudaMemcpyHostToDevice);
 
     // call the kernel function to compute RMSE values in parallel
@@ -335,19 +268,14 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     cudaDeviceSynchronize();
 
     // copy back the result from GPU to CPU
-    cudaMemcpy(flattenCenteroids, d_centeroids, sizeof(float) * k * d, cudaMemcpyDeviceToHost);
+    cudaMemcpy(centeroids, d_centeroids, sizeof(float) * k * d, cudaMemcpyDeviceToHost);
     cudaMemcpy(centeroids_sizes, d_centeroids_sizes, sizeof(int) * k, cudaMemcpyDeviceToHost);
-
-    // put the flattened form of centeroids back to matrix form
-    for(int i = 0; i < k; i++){
-        for(int j = 0; j < d; j++){
-            centeroids[i][j] = flattenCenteroids[i * d + j];
-        }
-    }
 
     // the centeroids computed by GPU was just sum of all points. Still needs to be divided by counts. 
     for(int i = 0; i < k; i++){
-        divideVector(centeroids[i], centeroids_sizes[i], centeroids[i]);
+        for(int j = 0; j < d; j++){
+            centeroids[i * d + j] /= centeroids_sizes[i];
+        }
     }
 
     // deallocate GPU memory
@@ -355,8 +283,6 @@ void updateCenteroids(float** dataPoints, int* labels, float** centeroids){
     cudaFree(d_labels);
     cudaFree(d_centeroids);
     cudaFree(d_centeroids_sizes);
-    delete[] flattenDataPoints;
-    delete[] flattenCenteroids;
     delete[] centeroids_sizes;
 
 }
@@ -387,20 +313,23 @@ bool hasConverged(float prevError, float currentError){
 void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
     n = n_; d = d_; k = k_; // copy arguments to global variables
 
-    float** centeroids = new float*[k];
-    for(int i = 0; i < k; i++){
-        centeroids[i] = new float[d];
+    float* centeroids = new float[k * d];
+    float* flattenDataPoints = new float[n * d];
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < d; j++){
+            flattenDataPoints[i * d + j] = dataPoints[i][j];
+        }
     }
 
-    initCenters(dataPoints, centeroids);
+    initCenters(flattenDataPoints, centeroids);
 
     int iterations = 0;
     float previousError = FLT_MAX;
     float currentError = 0;
     while(iterations < MAX_ITERATIONS){    
-        assignDataPoints(dataPoints, labels, centeroids);
-        updateCenteroids(dataPoints, labels, centeroids);
-        currentError = getMSE(dataPoints, labels, centeroids);
+        assignDataPoints(flattenDataPoints, labels, centeroids);
+        updateCenteroids(flattenDataPoints, labels, centeroids);
+        currentError = getMSE(flattenDataPoints, labels, centeroids);
         std::cout << "(iteration" << iterations << ") Total Error Now: " << std::setprecision(6) << currentError << std::endl;
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
@@ -409,8 +338,5 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
     std::cout << "--Finished. # of iterations: " << iterations << std::endl;
 
     // free memory
-    for(int i = 0; i < k; i++){
-        delete[] centeroids[i];
-    }
     delete[] centeroids;
 }
