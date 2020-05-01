@@ -41,8 +41,7 @@ float getMSE(float* dataPoints, int* labels, float* centeroids){
     cudaMalloc(&d_centeroids, sizeof(float) * k * d);
     cudaMalloc(&d_err, sizeof(float) * n);    
 
-
-    // copy flattened data into GPU
+    // copy data into GPU
     cudaMemcpy(d_dataPoints, dataPoints, sizeof(float) * n * d, cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, sizeof(int) * n, cudaMemcpyHostToDevice);
     cudaMemcpy(d_centeroids, centeroids, sizeof(float) * k * d, cudaMemcpyHostToDevice);
@@ -202,19 +201,6 @@ __global__ void d_assignDataPoints(float* dataPoints, int* labels, float* center
     labels[id] = closest;
 }
 
-// add two vectors
-__global__ void d_addVector(float* x1, float* x2, float* ret){
-    int id = blockIdx.x * blockDim.x + threadIdx.x;
-    if (id >= 1000) return;
-    ret[id] = x1[id] + x2[id];
-}
-
-void addVector(float* x1, float* x2, float* ret){
-    for(int i = 0 ; i < d; i++){
-        ret[i] = x1[i] + x2[i];
-    }
-}
-
 // divide vector by scaler
 __global__ void d_divideVector(float* x, int s, float* ret){
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -222,6 +208,7 @@ __global__ void d_divideVector(float* x, int s, float* ret){
     ret[id] = x[id] / (float)s;
 }
 
+// divide vector by scaler
 void divideVector(float* x, int s, float* ret){
     for(int i = 0; i < d; i++){
         ret[i] = x[i] / (float)s;
@@ -272,6 +259,7 @@ void updateCenteroids(float* dataPoints, int* labels, float* centeroids){
     cudaMemcpy(centeroids_sizes, d_centeroids_sizes, sizeof(int) * k, cudaMemcpyDeviceToHost);
 
     // the centeroids computed by GPU was just sum of all points. Still needs to be divided by counts. 
+    // this nested loop is really small, so I didn't parallelize. 
     for(int i = 0; i < k; i++){
         for(int j = 0; j < d; j++){
             centeroids[i * d + j] /= centeroids_sizes[i];
@@ -293,7 +281,7 @@ __global__ void d_updateCenteroids(float* dataPoints, int* labels, float* center
     int id_x = blockIdx.x * blockDim.x + threadIdx.x;
     int id_y = blockIdx.y * blockDim.y + threadIdx.y;
     if(id_x >= n || id_y >= k) return;
-        // if, the data Point at id_x belongs to the id_y-th centeroid
+        // if, the dataPoint at id_x belongs to the id_y-th centeroid, add the dataPoint to that centeroid
     if(labels[id_x] == id_y){
         for(int i = 0; i < d; i++){
             atomicAdd(&centeroids[id_y * d + i], dataPoints[id_x * d + i]);
@@ -313,6 +301,8 @@ bool hasConverged(float prevError, float currentError){
 void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
     n = n_; d = d_; k = k_; // copy arguments to global variables
 
+        // Here, I am converting dataPoints to a 1D array, to ease dealing with GPU.
+        // Same reason to declare centroids to be 1D, even though it is supposed to be a matrix. 
     float* centeroids = new float[k * d];
     float* flattenDataPoints = new float[n * d];
     for(int i = 0; i < n; i++){
@@ -321,16 +311,22 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
         }
     }
 
+        // initialize ceneroids
     initCenters(flattenDataPoints, centeroids);
 
     int iterations = 0;
     float previousError = FLT_MAX;
     float currentError = 0;
     while(iterations < MAX_ITERATIONS){    
+            // Assign all dataPoints to its closest centroids
         assignDataPoints(flattenDataPoints, labels, centeroids);
+            // Update centroids to be average of points sharing the same label number 
         updateCenteroids(flattenDataPoints, labels, centeroids);
+            // get the MSE(Mean-Squared-Error) to moniter convergence
         currentError = getMSE(flattenDataPoints, labels, centeroids);
+            // display the error to see how the program is running
         std::cout << "(iteration" << iterations << ") Total Error Now: " << std::setprecision(6) << currentError << std::endl;
+            // check convergence
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
         iterations++;
@@ -339,4 +335,5 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
 
     // free memory
     delete[] centeroids;
+    delete[] flattenDataPoints;
 }

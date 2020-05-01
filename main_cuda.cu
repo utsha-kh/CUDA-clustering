@@ -12,6 +12,7 @@ int main(int argc, char** argv){
     // read data from a csv file
     std::cout << "Loading input file..." << std::endl;
     const char *filename = "input.csv";
+
     Parser parser(filename);
     std::cout << "--Finished loading!" << std::endl;
 
