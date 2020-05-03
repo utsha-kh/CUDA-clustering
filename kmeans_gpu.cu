@@ -325,12 +325,12 @@ void kMeansClustering(float** dataPoints, int* labels, int n_, int d_, int k_){
             // get the MSE(Mean-Squared-Error) to moniter convergence
         currentError = getMSE(flattenDataPoints, labels, centeroids);
             // display the error to see how the program is running
-        std::cout << "(iteration" << iterations << ") Total Error Now: " << std::setprecision(6) << currentError << std::endl;
+        std::cout << "(iteration" << iterations << ") Mean Squared Error (MSE) Now: " << std::setprecision(6) << currentError << std::endl;
             // check convergence
         if(hasConverged(previousError, currentError)) break;
         previousError = currentError;
         iterations++;
-        }
+    }
     std::cout << "--Finished. # of iterations: " << iterations << std::endl;
 
     // free memory
